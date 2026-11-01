@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | CivicAlert</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+    
+    
+    <script>
+        const savedLang = localStorage.getItem("civic_lang");
+        if (savedLang) {
+            document.cookie = `googtrans=/en/${savedLang}; path=/`;
+        }
+    </script>
+</head>
+<body>
+    <nav class="navigation">
+        <div class="heading">
+            <img src="logo.png" alt="CivicAlert logo" class="logo">
+            <span class="title">CivicAlert</span>
+        </div>
+        <ul class="first">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="profile.html">Profile</a></li>
+            <li><a href="complaint.html">Report Complaint</a></li>
+            <li><a href="map.html">Map View</a></li>
+        </ul>
+        <div id="google_translate_element"></div>
+    </nav>
+
+    <main class="civic-page">
+        <section class="civic-card">
+            <p class="civic-eyebrow">ACCOUNT SETTINGS</p>
+            <h1>Your Profile</h1>
+            <p class="civic-intro">Set your local details and platform language.</p>
+
+            <form id="profile-form" novalidate>
+                <div class="civic-field">
+                    <label for="user-name">Full Name</label>
+                    <input id="user-name" type="text" placeholder="Enter your name" required>
+                </div>
+
+                <div class="civic-field">
+                    <label for="user-email">Email Address</label>
+                    <input id="user-email" type="email" placeholder="name@example.com" required>
+                </div>
+
+                <div class="civic-field">
+                    <label for="user-lang">Platform Language</label>
+                    <select id="user-lang">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                    </select>
+                </div>
+
+                <div id="profile-message" class="civic-message" role="status"></div>
+                
+                <button type="submit" class="civic-primary-btn">Save Preferences</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="profile.js"></script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script>
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement(
+                { pageLanguage: "en", autoDisplay: false },
+                "google_translate_element"
+            );
+        }
+    </script>
+</body>
+</html>
