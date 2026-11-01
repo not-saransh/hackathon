@@ -1,0 +1,1526 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CivicAlert | Hazard Map</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Leaflet -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Marker clustering -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- Heatmap -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #263746;
+        }
+
+        /* NAVBAR */
+
+        .navbar {
+            min-height: 75px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 6%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: bold;
+            color: #176b45;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 28px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #374151;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: #176b45;
+        }
+
+        .nav-links a.active {
+            border-bottom: 2px solid #176b45;
+            padding-bottom: 5px;
+        }
+
+        /* PAGE */
+
+        .page-container {
+            max-width: 1350px;
+            margin: auto;
+            padding: 35px 25px 50px;
+        }
+
+        .page-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .page-heading h1 {
+            font-size: 30px;
+            margin-bottom: 8px;
+            color: #172b3a;
+        }
+
+        .page-heading p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .location-badge {
+            background: #e5f5ec;
+            color: #176b45;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* STATISTICS */
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e0e7ee;
+            border-radius: 13px;
+            padding: 19px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.035);
+        }
+
+        .stat-card h3 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: #718096;
+            font-size: 13px;
+        }
+
+        .total-stat h3 {
+            color: #2878d0;
+        }
+
+        .open-stat h3 {
+            color: #e05252;
+        }
+
+        .resolved-stat h3 {
+            color: #23945d;
+        }
+
+        .nearby-note {
+            font-size: 12px;
+            color: #718096;
+            margin: -8px 0 22px;
+        }
+
+        /* GENERAL PANELS */
+
+        .panel {
+            background: white;
+            border: 1px solid #dce5ed;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 18px rgba(31,55,75,0.045);
+        }
+
+        .panel h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        /* SEARCH */
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1px solid #d4dee7;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            color: #263746;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #176b45;
+        }
+
+        button,
+        .action-link {
+            padding: 11px 17px;
+            background: #176b45;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        button:hover,
+        .action-link:hover {
+            background: #105436;
+        }
+
+        .secondary-button {
+            background: #e8f1ec;
+            color: #176b45;
+        }
+
+        .secondary-button:hover {
+            background: #d6e9dd;
+        }
+
+        .search-help {
+            color: #82909e;
+            font-size: 12px;
+            margin-top: 9px;
+        }
+
+        /* FILTERS */
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 15px;
+        }
+
+        .filter-field label,
+        .route-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 7px;
+            color: #526170;
+        }
+
+        /* MAP */
+
+        .map-card {
+            background: white;
+            border: 1px solid #dce5ed;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(31,55,75,0.08);
+            margin-bottom: 22px;
+        }
+
+        .map-header {
+            padding: 18px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #e5eaf0;
+        }
+
+        .map-header h2 {
+            font-size: 18px;
+        }
+
+        .map-header p {
+            font-size: 12px;
+            color: #82909e;
+            margin-top: 5px;
+        }
+
+        .map-actions {
+            display: flex;
+            gap: 9px;
+            flex-wrap: wrap;
+        }
+
+        #map {
+            height: 580px;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .map-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #e5eaf0;
+            color: #82909e;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        /* LEGEND */
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 13px;
+            padding: 15px 20px;
+            border-top: 1px solid #e5eaf0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #596675;
+        }
+
+        .legend-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+        }
+
+        /* CUSTOM MARKERS */
+
+        .custom-marker {
+            background: transparent;
+            border: none;
+        }
+
+        .marker-pin {
+            width: 23px;
+            height: 23px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* ROUTES */
+
+        .route-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 15px;
+            margin-bottom: 14px;
+        }
+
+        .route-results {
+            margin-top: 15px;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .route-result {
+            padding: 12px;
+            border: 1px solid #dce5ed;
+            border-radius: 9px;
+            margin-bottom: 9px;
+        }
+
+        .route-result strong {
+            color: #176b45;
+        }
+
+        /* RECENT REPORTS */
+
+        .recent-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .recent-item {
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px solid #e5eaf0;
+            border-radius: 9px;
+            cursor: pointer;
+        }
+
+        .recent-item:hover {
+            background: #eef5f1;
+        }
+
+        .recent-item strong {
+            font-size: 14px;
+        }
+
+        .recent-item p {
+            color: #718096;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .message {
+            color: #718096;
+            font-size: 13px;
+            padding: 8px 0;
+        }
+
+        .error-message {
+            color: #c0392b;
+        }
+
+        /* RESPONSIVE */
+
+        @media(max-width: 750px) {
+            .navbar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 15px;
+            }
+
+            .page-container {
+                padding: 25px 14px;
+            }
+
+            .page-heading {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-grid,
+            .route-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-row {
+                flex-direction: column;
+            }
+
+            .map-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .map-actions {
+                width: 100%;
+            }
+
+            #map {
+                height: 450px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- NAVIGATION -->
+
+<nav class="navbar">
+    <a href="index.html" class="logo">CivicAlert</a>
+
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="complaint.html">Report Complaint</a>
+        <a href="map.html" class="active">Map</a>
+        <a href="profile.html">Profile</a>
+    </div>
+</nav>
+
+
+<main class="page-container">
+
+    <!-- HEADING -->
+
+    <section class="page-heading">
+        <div>
+            <h1>Hazard Map</h1>
+            <p>
+                Explore reported civic issues, discover problem areas
+                and compare routes around Indore.
+            </p>
+        </div>
+
+        <div class="location-badge">
+            📍 Indore, Madhya Pradesh
+        </div>
+    </section>
+
+
+    <!-- STATISTICS -->
+
+    <section class="stats-grid">
+
+        <div class="stat-card total-stat">
+            <h3 id="total-count">0</h3>
+            <p>Reported Hazards</p>
+        </div>
+
+        <div class="stat-card open-stat">
+            <h3 id="open-count">0</h3>
+            <p>Unresolved Reports</p>
+        </div>
+
+        <div class="stat-card resolved-stat">
+            <h3 id="resolved-count">0</h3>
+            <p>Resolved Reports</p>
+        </div>
+
+    </section>
+
+    <p class="nearby-note" id="nearby-note">
+        Statistics are based on reports loaded from the server.
+    </p>
+
+
+    <!-- LOCATION SEARCH -->
+
+    <section class="panel">
+        <h2>🔎 Search an Area</h2>
+
+        <div class="search-row">
+            <input
+                type="text"
+                id="location-search"
+                placeholder="Search Palasia, Rajwada, Vijay Nagar..."
+            >
+
+            <button id="search-location-btn">
+                Search
+            </button>
+
+            <button class="secondary-button" id="locate-btn">
+                My Location
+            </button>
+        </div>
+
+        <p class="search-help">
+            Search for an area or use your current location.
+        </p>
+    </section>
+
+
+    <!-- FILTERS -->
+
+    <section class="panel">
+        <h2>Filter Reported Hazards</h2>
+
+        <div class="filter-grid">
+
+            <div class="filter-field">
+                <label for="category-filter">Hazard Category</label>
+
+                <select id="category-filter">
+                    <option value="all">All Categories</option>
+                    <option value="pothole">Potholes</option>
+                    <option value="open-manhole">Open Manholes</option>
+                    <option value="waterlogging">Waterlogging</option>
+                    <option value="road-construction">Road Construction</option>
+                    <option value="blocked-drainage">Blocked Drainage</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="status-filter">Complaint Status</label>
+
+                <select id="status-filter">
+                    <option value="all">All Statuses</option>
+                    <option value="open">Open</option>
+                    <option value="reported">Reported</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- MAP -->
+
+    <section class="map-card">
+
+        <div class="map-header">
+            <div>
+                <h2>Reported Hazards in Indore</h2>
+                <p>Click a marker to see complaint details.</p>
+            </div>
+
+            <div class="map-actions">
+                <button class="secondary-button" id="heatmap-btn">
+                    Show Heatmap
+                </button>
+
+                <button class="secondary-button" id="reset-map-btn">
+                    Reset Map
+                </button>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="legend" id="map-legend">
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#e53935"></span>
+                Pothole
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#f57c00"></span>
+                Open Manhole
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#1976d2"></span>
+                Waterlogging
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#8e44ad"></span>
+                Road Construction
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#00897b"></span>
+                Blocked Drainage
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#757575"></span>
+                Other
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-dot" style="background:#2878d0"></span>
+                Your Location
+            </div>
+        </div>
+
+        <div class="map-footer">
+            Map data © OpenStreetMap contributors.
+            Reported hazards may not represent every issue in an area.
+        </div>
+
+    </section>
+
+
+    <!-- REPORT FROM MAP -->
+
+    <section class="panel">
+        <h2>📍 Report a Hazard from the Map</h2>
+
+        <p class="message">
+            Click anywhere on the map to select the hazard's location.
+        </p>
+
+        <p id="selected-location" class="message">
+            No location selected yet.
+        </p>
+
+        <a
+            href="complaint.html"
+            id="report-from-map"
+            class="action-link"
+            style="display:none;"
+        >
+            Continue to Report Complaint
+        </a>
+    </section>
+
+
+    <!-- ROUTE SUGGESTIONS -->
+
+    <section class="panel">
+        <h2>🛣️ Route Suggestions</h2>
+
+        <p class="message">
+            Compare routes between two locations and see how many
+            reported hazards are near each route.
+        </p>
+
+        <div class="route-grid">
+
+            <div class="route-field">
+                <label for="route-start">Starting Point</label>
+                <input
+                    type="text"
+                    id="route-start"
+                    placeholder="e.g. Palasia, Indore"
+                >
+            </div>
+
+            <div class="route-field">
+                <label for="route-end">Destination</label>
+                <input
+                    type="text"
+                    id="route-end"
+                    placeholder="e.g. Rajwada, Indore"
+                >
+            </div>
+
+        </div>
+
+        <button id="find-route-btn">
+            Compare Routes
+        </button>
+
+        <div id="route-results" class="route-results">
+        </div>
+
+        <p class="search-help">
+            Route suggestions use available complaint reports.
+            They cannot guarantee road safety or account for unreported hazards.
+        </p>
+    </section>
+
+
+    <!-- RECENT REPORTS -->
+
+    <section class="panel">
+        <h2>🕒 Recently Reported Hazards</h2>
+
+        <div id="recent-list" class="recent-list">
+            <p class="message">Loading recent reports...</p>
+        </div>
+    </section>
+
+</main>
+
+
+<script>
+
+    const API_BASE = "http://127.0.0.1:5000";
+    const REPORTS_URL = `${API_BASE}/reports`;
+
+    const DEFAULT_CENTER = [22.7196, 75.8577];
+
+    const categoryColors = {
+        "pothole": "#e53935",
+        "open-manhole": "#f57c00",
+        "waterlogging": "#1976d2",
+        "road-construction": "#8e44ad",
+        "blocked-drainage": "#00897b",
+        "other": "#757575"
+    };
+
+    const categoryNames = {
+        "pothole": "Pothole",
+        "open-manhole": "Open Manhole",
+        "waterlogging": "Waterlogging",
+        "road-construction": "Road Construction",
+        "blocked-drainage": "Blocked Drainage",
+        "other": "Other"
+    };
+
+    const statusNames = {
+        "open": "Open",
+        "reported": "Reported",
+        "assigned": "Assigned",
+        "in-progress": "In Progress",
+        "resolved": "Resolved"
+    };
+
+    const map = L.map("map").setView(DEFAULT_CENTER, 13);
+
+    L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 19,
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }
+    ).addTo(map);
+
+
+    // Marker cluster group
+
+    const markerGroup = L.markerClusterGroup();
+
+    map.addLayer(markerGroup);
+
+
+    // Separate route layer
+
+    const routeGroup = L.layerGroup().addTo(map);
+
+
+    // Application data
+
+    let complaints = [];
+    let userMarker = null;
+    let userCoordinates = null;
+    let selectedMarker = null;
+    let heatLayer = null;
+    let heatVisible = false;
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        })[character]);
+    }
+
+
+    function normalizeComplaint(item) {
+        const latitude = Number(item.latitude ?? item.lat);
+        const longitude = Number(item.longitude ?? item.lng);
+
+        return {
+            ...item,
+            latitude,
+            longitude,
+            title: item.title || "Reported Hazard",
+            category: String(item.category || "other").toLowerCase(),
+            description: item.description || "No description provided.",
+            location: item.location || "Location not provided",
+            status: String(item.status || "reported").toLowerCase(),
+            date: item.reported_on || item.created_at || item.date || ""
+        };
+    }
+
+
+    function validCoordinates(complaint) {
+        return Number.isFinite(complaint.latitude) &&
+               Number.isFinite(complaint.longitude) &&
+               complaint.latitude >= -90 &&
+               complaint.latitude <= 90 &&
+               complaint.longitude >= -180 &&
+               complaint.longitude <= 180;
+    }
+
+
+    function formatDate(date) {
+        if (!date) return "Date unavailable";
+
+        const parsed = new Date(date);
+
+        if (Number.isNaN(parsed.getTime())) {
+            return String(date);
+        }
+
+        return parsed.toLocaleDateString();
+    }
+
+
+    function createHazardIcon(category) {
+        const color = categoryColors[category] || categoryColors.other;
+
+        return L.divIcon({
+            className: "custom-marker",
+            html: `
+                <div class="marker-pin"
+                     style="background:${color}">
+                </div>
+            `,
+            iconSize: [23, 23],
+            iconAnchor: [12, 23],
+            popupAnchor: [0, -23]
+        });
+    }
+
+    function createPopup(complaint) {
+        const category =
+            categoryNames[complaint.category] || "Other";
+
+        const status =
+            statusNames[complaint.status] || complaint.status;
+
+        const content = document.createElement("div");
+
+        content.style.minWidth = "190px";
+        content.style.fontFamily = "Arial, sans-serif";
+
+        const title = document.createElement("h3");
+        title.textContent = complaint.title;
+        title.style.color = categoryColors[complaint.category] || "#555";
+        title.style.marginBottom = "8px";
+
+        const description = document.createElement("p");
+        description.textContent = complaint.description;
+        description.style.fontSize = "13px";
+        description.style.marginBottom = "8px";
+
+        const location = document.createElement("p");
+        location.textContent = "Location: " + complaint.location;
+        location.style.fontSize = "12px";
+
+        const categoryText = document.createElement("p");
+        categoryText.textContent = "Category: " + category;
+        categoryText.style.fontSize = "12px";
+
+        const statusText = document.createElement("p");
+        statusText.textContent = "Status: " + status;
+        statusText.style.fontSize = "12px";
+
+        const date = document.createElement("p");
+        date.textContent = "Reported: " + formatDate(complaint.date);
+        date.style.fontSize = "12px";
+
+        content.append(
+            title,
+            description,
+            location,
+            categoryText,
+            statusText,
+            date
+        );
+
+        return content;
+    }
+
+    function getFilteredComplaints() {
+        const category =
+            document.getElementById("category-filter").value;
+
+        const status =
+            document.getElementById("status-filter").value;
+
+        return complaints.filter(complaint => {
+            const categoryMatch =
+                category === "all" || complaint.category === category;
+
+            const statusMatch =
+                status === "all" || complaint.status === status;
+
+            return categoryMatch && statusMatch;
+        });
+    }
+
+
+    function renderMarkers() {
+        markerGroup.clearLayers();
+
+        const filtered = getFilteredComplaints();
+
+        filtered.forEach(complaint => {
+            if (!validCoordinates(complaint)) return;
+
+            const marker = L.marker(
+                [complaint.latitude, complaint.longitude],
+                {
+                    icon: createHazardIcon(complaint.category)
+                }
+            );
+
+            marker.bindPopup(createPopup(complaint));
+
+            markerGroup.addLayer(marker);
+        });
+
+        updateHeatmap();
+    }
+
+
+    document.getElementById("category-filter")
+        .addEventListener("change", renderMarkers);
+
+    document.getElementById("status-filter")
+        .addEventListener("change", renderMarkers);
+
+    function updateStatistics() {
+        const total = complaints.length;
+
+        const resolved = complaints.filter(
+            item => item.status === "resolved"
+        ).length;
+
+        const unresolved = complaints.filter(
+            item => item.status !== "resolved"
+        ).length;
+
+        document.getElementById("total-count").textContent = total;
+
+        document.getElementById("open-count").textContent = unresolved;
+
+        document.getElementById("resolved-count").textContent = resolved;
+
+        const valid = complaints.filter(validCoordinates);
+
+        if (userCoordinates) {
+            const nearby = valid.filter(item =>
+                distanceBetween(
+                    userCoordinates,
+                    [item.latitude, item.longitude]
+                ) <= 2000
+            ).length;
+
+            document.getElementById("nearby-note").textContent =
+                `${nearby} reported hazards within approximately 2 km of your location.`;
+        } else {
+            document.getElementById("nearby-note").textContent =
+                `${valid.length} reports have usable coordinates. Enable location access to calculate nearby hazards.`;
+        }
+    }
+    function renderRecentReports() {
+        const container = document.getElementById("recent-list");
+
+        const recent = [...complaints]
+            .sort((a, b) =>
+                new Date(b.date || 0) - new Date(a.date || 0)
+            )
+            .slice(0, 5);
+
+        container.innerHTML = "";
+
+        if (recent.length === 0) {
+            container.innerHTML =
+                '<p class="message">No reports available.</p>';
+            return;
+        }
+
+        recent.forEach(complaint => {
+            const item = document.createElement("div");
+
+            item.className = "recent-item";
+
+            const title = document.createElement("strong");
+            title.textContent = complaint.title;
+
+            const details = document.createElement("p");
+
+            details.textContent =
+                `${categoryNames[complaint.category] || "Other"} • ` +
+                `${statusNames[complaint.status] || complaint.status} • ` +
+                `${formatDate(complaint.date)}`;
+
+            item.append(title, details);
+
+            item.addEventListener("click", () => {
+                if (!validCoordinates(complaint)) {
+                    alert("Coordinates are unavailable for this report.");
+                    return;
+                }
+
+                map.setView(
+                    [complaint.latitude, complaint.longitude],
+                    17
+                );
+
+                const marker = L.marker(
+                    [complaint.latitude, complaint.longitude],
+                    { icon: createHazardIcon(complaint.category) }
+                );
+
+                marker.bindPopup(createPopup(complaint)).openPopup();
+
+                // Add a temporary marker for the selected recent report.
+                marker.addTo(map);
+                setTimeout(() => map.removeLayer(marker), 10000);
+            });
+
+            container.appendChild(item);
+        });
+    }
+
+    async function loadComplaints() {
+        const recentList = document.getElementById("recent-list");
+
+        recentList.innerHTML =
+            '<p class="message">Loading reports...</p>';
+
+        try {
+            const response = await fetch(REPORTS_URL);
+
+            if (!response.ok) {
+                throw new Error("Server returned " + response.status);
+            }
+
+            const data = await response.json();
+
+            // Supports either a direct array or { reports: [...] }
+            const records = Array.isArray(data)
+                ? data
+                : data.reports;
+
+            if (!Array.isArray(records)) {
+                throw new Error("Unexpected reports response format.");
+            }
+
+            complaints = records.map(normalizeComplaint);
+
+            renderMarkers();
+            updateStatistics();
+            renderRecentReports();
+
+            const withoutCoordinates =
+                complaints.filter(item => !validCoordinates(item)).length;
+
+            if (withoutCoordinates > 0) {
+                recentList.insertAdjacentHTML(
+                    "beforeend",
+                    `<p class="message">
+                        ${withoutCoordinates} reports do not have valid coordinates yet.
+                    </p>`
+                );
+            }
+
+        } catch (error) {
+            console.error("Could not load complaints:", error);
+
+            recentList.innerHTML = `
+                <p class="message error-message">
+                    Could not load complaints. Check that the Flask backend
+                    is running and the API is accessible.
+                </p>
+            `;
+        }
+    }
+
+
+    function locateUser() {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by this browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                userCoordinates = [lat, lng];
+
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                }
+
+                userMarker = L.circleMarker(userCoordinates, {
+                    radius: 9,
+                    color: "#ffffff",
+                    weight: 3,
+                    fillColor: "#2878d0",
+                    fillOpacity: 1
+                }).addTo(map);
+
+                userMarker.bindPopup("Your current location");
+
+                map.setView(userCoordinates, 16);
+
+                updateStatistics();
+            },
+
+            error => {
+                alert(
+                    "Unable to get your location. Please allow location access."
+                );
+                console.warn(error.message);
+            },
+
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    }
+
+
+    document.getElementById("locate-btn")
+        .addEventListener("click", locateUser);
+
+    async function searchLocation() {
+        const query =
+            document.getElementById("location-search").value.trim();
+
+        if (!query) {
+            alert("Enter an area to search.");
+            return;
+        }
+
+        try {
+            const url =
+                "https://photon.komoot.io/api/?q=" +
+                encodeURIComponent(query + ", Indore, India") +
+                "&limit=1";
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error("Location search failed.");
+            }
+
+            const data = await response.json();
+
+            if (!data.features || data.features.length === 0) {
+                alert("Location not found.");
+                return;
+            }
+
+            const coordinates = data.features[0].geometry.coordinates;
+
+            const lng = coordinates[0];
+            const lat = coordinates[1];
+
+            map.setView([lat, lng], 16);
+
+        } catch (error) {
+            console.error(error);
+            alert("Could not search for this location.");
+        }
+    }
+
+
+    document.getElementById("search-location-btn")
+        .addEventListener("click", searchLocation);
+
+    document.getElementById("location-search")
+        .addEventListener("keydown", event => {
+            if (event.key === "Enter") searchLocation();
+        });
+
+    function updateHeatmap() {
+        if (!heatVisible) return;
+
+        if (heatLayer) {
+            map.removeLayer(heatLayer);
+        }
+
+        const points = getFilteredComplaints()
+            .filter(validCoordinates)
+            .map(item => [
+                item.latitude,
+                item.longitude,
+                0.7
+            ]);
+
+        heatLayer = L.heatLayer(points, {
+            radius: 30,
+            blur: 22,
+            maxZoom: 17
+        }).addTo(map);
+    }
+
+
+    document.getElementById("heatmap-btn")
+        .addEventListener("click", () => {
+            heatVisible = !heatVisible;
+
+            const button = document.getElementById("heatmap-btn");
+
+            if (heatVisible) {
+                button.textContent = "Hide Heatmap";
+                updateHeatmap();
+            } else {
+                button.textContent = "Show Heatmap";
+
+                if (heatLayer) {
+                    map.removeLayer(heatLayer);
+                    heatLayer = null;
+                }
+            }
+        });
+
+    map.on("click", event => {
+        const lat = event.latlng.lat;
+        const lng = event.latlng.lng;
+
+        if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+        }
+
+        selectedMarker = L.marker([lat, lng], {
+            draggable: true
+        }).addTo(map);
+
+        function updateSelectedCoordinates(position) {
+            const selectedLat = position.lat.toFixed(6);
+            const selectedLng = position.lng.toFixed(6);
+
+            document.getElementById("selected-location").textContent =
+                `Selected coordinates: ${selectedLat}, ${selectedLng}`;
+
+            document.getElementById("report-from-map").href =
+                `complaint.html?latitude=${selectedLat}&longitude=${selectedLng}`;
+        }
+
+        updateSelectedCoordinates(event.latlng);
+
+        selectedMarker.on("dragend", event => {
+            updateSelectedCoordinates(event.target.getLatLng());
+        });
+
+        document.getElementById("report-from-map").style.display =
+            "inline-block";
+    });
+
+    function distanceBetween(pointA, pointB) {
+        const R = 6371000;
+
+        const toRadians = value => value * Math.PI / 180;
+
+        const lat1 = toRadians(pointA[0]);
+        const lat2 = toRadians(pointB[0]);
+
+        const dLat = toRadians(pointB[0] - pointA[0]);
+        const dLng = toRadians(pointB[1] - pointA[1]);
+
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLng / 2) ** 2;
+
+        return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    async function geocodeLocation(query) {
+        const url =
+            "https://photon.komoot.io/api/?q=" +
+            encodeURIComponent(query + ", Indore, India") +
+            "&limit=1";
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error("Could not search for route location.");
+        }
+
+        const data = await response.json();
+
+        if (!data.features || !data.features.length) {
+            throw new Error("Could not find: " + query);
+        }
+
+        const coordinates = data.features[0].geometry.coordinates;
+
+        return {
+            lat: coordinates[1],
+            lng: coordinates[0]
+        };
+    }
+
+
+    function countHazardsNearRoute(routeCoordinates) {
+        const validReports = complaints.filter(item =>
+            validCoordinates(item) &&
+            item.status !== "resolved"
+        );
+
+        return validReports.filter(complaint => {
+            let closestDistance = Infinity;
+
+            // Check the route's geometry points.
+            routeCoordinates.forEach(point => {
+                const distance = distanceBetween(
+                    [complaint.latitude, complaint.longitude],
+                    [point[1], point[0]]
+                );
+
+                closestDistance = Math.min(closestDistance, distance);
+            });
+
+            return closestDistance <= 60;
+        }).length;
+    }
+
+
+    async function compareRoutes() {
+        const start =
+            document.getElementById("route-start").value.trim();
+
+        const end =
+            document.getElementById("route-end").value.trim();
+
+        const resultBox =
+            document.getElementById("route-results");
+
+        if (!start || !end) {
+            alert("Enter both a starting point and destination.");
+            return;
+        }
+
+        resultBox.textContent = "Finding and comparing routes...";
+
+        routeGroup.clearLayers();
+
+        try {
+            const origin = await geocodeLocation(start);
+            const destination = await geocodeLocation(end);
+
+            const url =
+                `https://router.project-osrm.org/route/v1/driving/` +
+                `${origin.lng},${origin.lat};${destination.lng},${destination.lat}` +
+                "?overview=full&geometries=geojson&alternatives=true&steps=false";
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error("Route service unavailable.");
+            }
+
+            const data = await response.json();
+
+            if (data.code !== "Ok" || !data.routes.length) {
+                throw new Error("No routes found.");
+            }
+
+            const routes = data.routes.map((route, index) => ({
+                route,
+                index,
+                hazardCount: countHazardsNearRoute(
+                    route.geometry.coordinates
+                )
+            }));
+
+            // Rank routes by number of nearby unresolved reports.
+            routes.sort((a, b) =>
+                a.hazardCount - b.hazardCount
+            );
+
+            const bestRoute = routes[0];
+
+            const bounds = [];
+
+            routes.forEach(item => {
+                const isRecommended = item === bestRoute;
+
+                const layer = L.geoJSON(item.route.geometry, {
+                    style: {
+                        color: isRecommended ? "#159957" : "#78909c",
+                        weight: isRecommended ? 7 : 4,
+                        opacity: isRecommended ? 0.9 : 0.65
+                    }
+                }).addTo(routeGroup);
+
+                bounds.push(layer.getBounds());
+            });
+
+            if (bounds.length) {
+                const combinedBounds = bounds.reduce(
+                    (result, current) => result.extend(current)
+                );
+
+                map.fitBounds(combinedBounds, {
+                    padding: [35, 35]
+                });
+            }
+
+            resultBox.innerHTML = "";
+
+            routes.forEach((item, index) => {
+                const distance =
+                    (item.route.distance / 1000).toFixed(2);
+
+                const duration =
+                    Math.round(item.route.duration / 60);
+
+                const result = document.createElement("div");
+
+                result.className = "route-result";
+
+                const heading = document.createElement("strong");
+
+                heading.textContent =
+                    index === 0
+                        ? "Recommended route"
+                        : `Alternative route ${index}`;
+
+                const details = document.createElement("p");
+
+                details.textContent =
+                    `Distance: ${distance} km | ` +
+                    `Estimated driving time: ${duration} minutes | ` +
+                    `Nearby unresolved reports: ${item.hazardCount}`;
+
+                result.append(heading, details);
+                resultBox.appendChild(result);
+            });
+
+            const disclaimer = document.createElement("p");
+
+            disclaimer.className = "search-help";
+            disclaimer.textContent =
+                "The recommended route has the fewest detected nearby reports among the routes returned. This is not a safety guarantee.";
+
+            resultBox.appendChild(disclaimer);
+
+        } catch (error) {
+            console.error(error);
+
+            resultBox.textContent =
+                error.message || "Could not compare routes.";
+        }
+    }
+
+
+    document.getElementById("find-route-btn")
+        .addEventListener("click", compareRoutes);
+
+    document.getElementById("reset-map-btn")
+        .addEventListener("click", () => {
+            map.setView(DEFAULT_CENTER, 13);
+
+            routeGroup.clearLayers();
+
+            document.getElementById("route-results").innerHTML = "";
+
+            document.getElementById("category-filter").value = "all";
+            document.getElementById("status-filter").value = "all";
+
+            renderMarkers();
+        });
+
+    loadComplaints();
+
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 200);
+
+</script>
+
+</body>
+</html>
